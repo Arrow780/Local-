@@ -1,0 +1,6 @@
+{
+  "name": "识字小达人 (Kids Flashcards)",
+  "description": "A flashcard app for 6-7 year olds to learn Chinese characters with spaced repetition, Gemini-powered mnemonics, and text-to-speech.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
