@@ -14,22 +14,38 @@ interface DeckProps {
 export const Deck: React.FC<DeckProps> = ({ words, title, onClose, onComplete }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const [currentDeckWords, setCurrentDeckWords] = useState(words);
+  const [currentTitle, setCurrentTitle] = useState(title);
+  const [sessionMistakes, setSessionMistakes] = useState<string[]>([]);
+
   const { addMistake, removeMistake } = useStore();
 
-  const currentWord = words[currentIndex];
+  const deckWords = React.useMemo(() => {
+    return [...currentDeckWords].sort(() => Math.random() - 0.5);
+  }, [currentDeckWords, retryCount]);
+
+  const currentWord = deckWords[currentIndex];
 
   const handleKnow = () => {
     removeMistake(currentWord);
-    nextCard();
+    nextCard(false);
   };
 
   const handleDontKnow = () => {
     addMistake(currentWord);
-    nextCard();
+    nextCard(true);
   };
 
-  const nextCard = () => {
-    if (currentIndex < words.length - 1) {
+  const nextCard = (isMistake: boolean) => {
+    if (isMistake) {
+      setSessionMistakes((prev) => 
+        prev.includes(currentWord) ? prev : [...prev, currentWord]
+      );
+    }
+
+    if (currentIndex < deckWords.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setIsFinished(true);
@@ -68,22 +84,57 @@ export const Deck: React.FC<DeckProps> = ({ words, title, onClose, onComplete })
     }, 250);
   };
 
+  const handleReviewSessionMistakes = () => {
+    setCurrentDeckWords(sessionMistakes);
+    setSessionMistakes([]);
+    setCurrentIndex(0);
+    setIsFinished(false);
+    setRetryCount((r) => r + 1);
+    setCurrentTitle(`${title} (错题复习)`);
+  };
+
+  const handleRetryAll = () => {
+    setCurrentDeckWords(words);
+    setSessionMistakes([]);
+    setCurrentIndex(0);
+    setIsFinished(false);
+    setRetryCount((r) => r + 1);
+    setCurrentTitle(title);
+  };
+
   if (isFinished) {
     return (
-      <div className="flex flex-col items-center justify-center h-full space-y-8 p-6 text-center">
+      <div className="flex flex-col items-center justify-center h-full space-y-8 p-6 text-center animate-in fade-in zoom-in duration-300">
         <div className="text-6xl">🎉</div>
         <h2 className="text-4xl font-bold text-gray-800">太棒了！</h2>
-        <p className="text-xl text-gray-600">你完成了 {title} 的学习！</p>
-        <div className="flex gap-4 mt-8">
+        <p className="text-xl text-gray-600">你完成了 {currentTitle} 的学习！</p>
+        
+        {sessionMistakes.length > 0 && (
+          <div className="bg-rose-50 border-2 border-rose-100 text-rose-600 px-6 py-4 rounded-3xl font-medium flex-col flex items-center gap-2 max-w-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <RotateCcw size={24} />
+              <span className="text-lg">本次有 {sessionMistakes.length} 个不认识的字</span>
+            </div>
+            <span className="text-sm opacity-80">(已自动加入主页错题本)</span>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-4 mt-8 justify-center">
+          {sessionMistakes.length > 0 && (
+            <button
+              onClick={handleReviewSessionMistakes}
+              className="flex items-center gap-2 px-6 py-3 bg-rose-100 text-rose-600 rounded-2xl font-bold text-lg hover:bg-rose-200 transition-colors shadow-sm"
+            >
+              <RotateCcw size={24} />
+              仅复习错题
+            </button>
+          )}
           <button
-            onClick={() => {
-              setCurrentIndex(0);
-              setIsFinished(false);
-            }}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-100 text-blue-600 rounded-2xl font-bold text-lg hover:bg-blue-200 transition-colors"
+            onClick={handleRetryAll}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-100 text-blue-600 rounded-2xl font-bold text-lg hover:bg-blue-200 transition-colors shadow-sm"
           >
             <RotateCcw size={24} />
-            再来一次
+            {sessionMistakes.length > 0 ? '全部重读' : '再来一次'}
           </button>
           <button
             onClick={onClose}
@@ -105,9 +156,9 @@ export const Deck: React.FC<DeckProps> = ({ words, title, onClose, onComplete })
         >
           <ArrowLeft size={24} />
         </button>
-        <h2 className="text-2xl font-bold text-gray-700">{title}</h2>
+        <h2 className="text-2xl font-bold text-gray-700">{currentTitle}</h2>
         <div className="text-lg font-bold text-gray-400 bg-white px-4 py-2 rounded-full shadow-sm">
-          {currentIndex + 1} / {words.length}
+          {currentIndex + 1} / {deckWords.length}
         </div>
       </div>
 
@@ -125,7 +176,7 @@ export const Deck: React.FC<DeckProps> = ({ words, title, onClose, onComplete })
         <div className="h-3 w-full bg-gray-200 rounded-full overflow-hidden">
           <div 
             className="h-full bg-emerald-400 transition-all duration-300 ease-out"
-            style={{ width: `${((currentIndex) / words.length) * 100}%` }}
+            style={{ width: `${((currentIndex) / deckWords.length) * 100}%` }}
           />
         </div>
       </div>

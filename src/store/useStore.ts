@@ -5,6 +5,7 @@ interface AppState {
   mistakes: string[];
   completedWeeks: string[];
   addMistake: (word: string) => void;
+  addMistakes: (words: string[]) => void;
   removeMistake: (word: string) => void;
   markWeekCompleted: (bookId: string, week: number) => void;
 }
@@ -20,6 +21,12 @@ export const useStore = create<AppState>()(
             ? state.mistakes
             : [...state.mistakes, word],
         })),
+      addMistakes: (words) =>
+        set((state) => {
+          const current = new Set(state.mistakes);
+          words.forEach((w) => current.add(w));
+          return { mistakes: Array.from(current) };
+        }),
       removeMistake: (word) =>
         set((state) => ({
           mistakes: state.mistakes.filter((w) => w !== word),
